@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	tetatet "github.com/ushmodin/tetatetchatbot/http"
@@ -10,7 +11,8 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/t/b/tetatet/updates", tetatet.TetATetBotHttpUpdate).Methods("POST")
-	router.HandleFunc("/ping", tetatet.Ping).Methods("GET")
-	http.ListenAndServe("localhost:8080", router)
+	server, _ := tetatet.NewTetATetHttpServer()
+	router.HandleFunc("/t/b/tetatet/updates", server.UpdateHandler).Methods("POST")
+	router.HandleFunc("/ping", server.PingHandler).Methods("GET")
+	log.Fatal(http.ListenAndServe("localhost:8080", router))
 }
