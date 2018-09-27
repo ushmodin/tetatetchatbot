@@ -19,9 +19,9 @@ func NewTelegramClient(appKey string) (*TelegramClient, error) {
 func (client TelegramClient) SendMessage(chatId interface{}, text string) error {
 	_, err := resty.R().
 		SetBody(struct {
-			chatId interface{} `json:"chat_id"`
-			text   string      `json:"text"`
-		}{chatId: chatId, text: text}).
+			ChatId interface{} `json:"chat_id"`
+			Text   string      `json:"text"`
+		}{ChatId: chatId, Text: text}).
 		Post("https://api.telegram.org/bot" + client.appKey + "/sendMessage")
 	return err
 }
