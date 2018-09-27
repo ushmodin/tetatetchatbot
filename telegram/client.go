@@ -1,10 +1,6 @@
 package telegram
 
 import (
-	"encoding/json"
-	"log"
-	"net/http"
-
 	"gopkg.in/resty.v1"
 )
 
@@ -24,21 +20,4 @@ func (client TelegramClient) SendMessage(chatId interface{}, text string) error 
 		}{ChatId: chatId, Text: text}).
 		Post("https://api.telegram.org/bot" + client.appKey + "/sendMessage")
 	return err
-}
-
-func (server TelegramClient) UpdateHandler(w http.ResponseWriter, r *http.Request) {
-	var update Update
-	err := json.NewDecoder(r.Body).Decode(&update)
-	if err != nil {
-		log.Println(err)
-	}
-	err = server.SendMessage(update.Message.Chat.ID, update.Message.Text)
-	if err != nil {
-		log.Println(err)
-	}
-}
-
-func (server TelegramClient) PingHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK"))
-	w.Header()["Content-type"] = []string{"text/plain"}
 }
