@@ -29,6 +29,12 @@ type Dialog struct {
 	Status  DialogStatus
 }
 
+type DialogRequest struct {
+	ID         bson.ObjectId `json:"_id,omitempty"`
+	UserId     bson.ObjectId
+	Processing bool
+}
+
 type BotUser struct {
 	ID           bson.ObjectId `json:"_id,omitempty"`
 	TelegramID   int
@@ -115,13 +121,24 @@ func (bot Bot) Search(user *User) error {
 		if err != nil {
 			return err
 		}
-		dialog.Status = DIALOG_STATUS_DELETED
 		err = bot.db.DeleteDialog(dialog.ID)
 		if err != nil {
 			return err
 		}
+		var companyUserID bson.ObjectId
+		if botUser.ID == dialog.UserA {
+			companyUserID := dialog.UserB
+		} else {
+			companyUserID := dialog.UserA
+		}
+		bot.db.UpdateUserPause(companyUserID, true)
 	}
 	err = bot.db.UpdateUserStatus(botUser.ID, USER_STATUS_SEARCH)
+	if err != nil {
+		return err
+	}
+	log.Println("Start dialog request")
+	err = bot.db.StartDialog(botUser.ID)
 	if err != nil {
 		return err
 	}

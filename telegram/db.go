@@ -66,3 +66,10 @@ func (db Db) UpdateUserStatus(id bson.ObjectId, status UserStatus) error {
 func (db Db) UpdateUserPause(id bson.ObjectId, flag bool) error {
 	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"Pause": flag})
 }
+
+func (db Db) StartDialog(userId bson.ObjectId) error {
+	return db.mongo.DB(db.db).C("dialog_requests").Insert(DialogRequest{
+		UserId:     userId,
+		Processing: false,
+	})
+}
