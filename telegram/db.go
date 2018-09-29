@@ -56,15 +56,15 @@ func (db Db) FindDialog(id bson.ObjectId) (Dialog, error) {
 }
 
 func (db Db) DeleteDialog(id bson.ObjectId) error {
-	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"Status": DIALOG_STATUS_DELETED})
+	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": DIALOG_STATUS_DELETED}})
 }
 
 func (db Db) UpdateUserStatus(id bson.ObjectId, status UserStatus) error {
-	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"Status": status})
+	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": status}})
 }
 
 func (db Db) UpdateUserPause(id bson.ObjectId, flag bool) error {
-	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"Pause": flag})
+	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Pause": flag}})
 }
 
 func (db Db) StartDialog(userId bson.ObjectId) error {
@@ -72,4 +72,29 @@ func (db Db) StartDialog(userId bson.ObjectId) error {
 		UserId:     userId,
 		Processing: false,
 	})
+}
+
+func (db Db) FindNextDialogRequest() (DialogRequest, error) {
+	var req DialogRequest
+
+	_, err := db.mongo.DB(db.db).C("dialog_requests").Find(bson.M{"Processing": false}).Apply(mgo.Change{
+		Update: bson.M{"$set": bson.M{"Processing": true}},
+	}, &req)
+
+	return req, err
+}
+
+func (db Db) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error {
+	return db.mongo.DB(db.db).C("dialog_requests").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Processing": processing}})
+}
+
+func (db Db) CreateDialog(reqA DialogRequest, reqB DialogRequest) error {
+	dialog := Dialog{
+		UserA:   reqA.UserId,
+		AcceptA: false,
+		UserB:   reqB.UserId,
+		AcceptB: false,
+		Status:  DIALOG_STATUS_REQUEST,
+	}
+	return db.mongo.DB(db.db).C("dialogs").Insert(dialog)
 }

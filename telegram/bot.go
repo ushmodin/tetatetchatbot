@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"log"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 )
@@ -132,6 +133,7 @@ func (bot Bot) Search(user *User) error {
 			companyUserID := dialog.UserA
 		}
 		bot.db.UpdateUserPause(companyUserID, true)
+
 	}
 	err = bot.db.UpdateUserStatus(botUser.ID, USER_STATUS_SEARCH)
 	if err != nil {
@@ -141,6 +143,40 @@ func (bot Bot) Search(user *User) error {
 	err = bot.db.StartDialog(botUser.ID)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (bot Bot) JoinRequests() error {
+	for {
+		reqA, err := bot.db.FindNextDialogRequest()
+		if bot.db.IsNotFound(err) {
+			time.Sleep(1 * time.Second)
+			continue
+		} else if err != nil {
+			return nil
+		}
+		log.Println("Request A found " + reqA.ID)
+
+		var reqB DialogRequest
+		for {
+			reqB, err := bot.db.FindNextDialogRequest()
+			if bot.db.IsNotFound(err) {
+				time.Sleep(1 * time.Second)
+				continue
+			} else if err != nil {
+				bot.db.UpdateDialogRequestProcessing(reqA.ID, false)
+				return nil
+			}
+			log.Println("Request B found " + reqA.ID)
+			break
+		}
+		err = bot.db.CreateDialog(reqA, reqB)
+		if err != nil {
+			return err
+		}
+		log.Println("Dialog created")
+		break
 	}
 	return nil
 }
