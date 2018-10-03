@@ -44,7 +44,7 @@ type BotUser struct {
 	Status       UserStatus
 	Pause        bool
 	ChatID       int64
-	DialogID     bson.ObjectId
+	DialogID     *bson.ObjectId
 }
 
 const (
@@ -70,19 +70,20 @@ func (bot Bot) Start(user *User, chat *Chat) error {
 		return err
 	}
 
-	if botUser.DialogID.Valid() {
-		dialog, err := bot.db.FindDialog(botUser.DialogID)
+	if botUser.DialogID != nil {
+		dialogId := *botUser.DialogID
+		dialog, err := bot.db.FindDialog(dialogId)
 		if bot.db.IsNotFound(err) {
-			log.Println("Dialog not found: " + botUser.DialogID)
-			botUser.DialogID = ""
+			log.Println("Dialog not found: " + dialogId)
+			botUser.DialogID = nil
 		}
 		dialogActive, err := bot.IsDialogActive(dialog)
 		if err != nil {
 			return err
 		}
 		if !dialogActive {
-			log.Println("Dialog not active: " + botUser.DialogID)
-			botUser.DialogID = ""
+			log.Println("Dialog not active: " + dialogId)
+			botUser.DialogID = nil
 		}
 	}
 
@@ -99,14 +100,14 @@ func (bot Bot) IsDialogActive(dialog Dialog) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if userA.DialogID != dialog.ID {
+	if *userA.DialogID != dialog.ID {
 		return false, nil
 	}
 	userB, err := bot.db.FindUser(dialog.UserB)
 	if err != nil {
 		return false, err
 	}
-	if userB.DialogID != dialog.ID {
+	if *userB.DialogID != dialog.ID {
 		return false, nil
 	}
 	return true, nil
@@ -117,8 +118,8 @@ func (bot Bot) Search(user *User) error {
 	if err != nil {
 		return err
 	}
-	if botUser.DialogID != "" {
-		dialog, err := bot.db.FindDialog(botUser.DialogID)
+	if botUser.DialogID != nil {
+		dialog, err := bot.db.FindDialog(*botUser.DialogID)
 		if err != nil {
 			return err
 		}
@@ -158,24 +159,34 @@ func (bot Bot) JoinRequests() error {
 		}
 		log.Println("Request A found " + reqA.ID)
 
-		var reqB DialogRequest
-		for {
-			reqB, err := bot.db.FindNextDialogRequest()
-			if bot.db.IsNotFound(err) {
-				time.Sleep(1 * time.Second)
-				continue
-			} else if err != nil {
-				bot.db.UpdateDialogRequestProcessing(reqA.ID, false)
-				return nil
+		go func() {
+			var reqB DialogRequest
+			for {
+				reqB, err = bot.db.FindNextDialogRequest()
+				if bot.db.IsNotFound(err) {
+					time.Sleep(1 * time.Second)
+					continue
+				} else if err != nil {
+					bot.db.UpdateDialogRequestProcessing(reqA.ID, false)
+					return
+				}
+				log.Println("Request B found " + reqA.ID)
+				break
 			}
-			log.Println("Request B found " + reqA.ID)
-			break
-		}
-		err = bot.db.CreateDialog(reqA, reqB)
-		if err != nil {
-			return err
-		}
-		log.Println("Dialog created")
+			dialogId, err := bot.db.CreateDialog(reqA, reqB)
+			if err != nil {
+				return
+			}
+			err = bot.db.UpdateUserDialog(reqA.UserId, &dialogId)
+			if err != nil {
+				return
+			}
+			err = bot.db.UpdateUserDialog(reqB.UserId, &dialogId)
+			if err != nil {
+				return
+			}
+			log.Println("Dialog created")
+		}()
 		break
 	}
 	return nil
@@ -202,6 +213,29 @@ func (bot Bot) Who() error {
 	return nil
 }
 
-func (bot Bot) GetCurrentCompany() (interface{}, error) {
-	return nil, nil
+func (bot Bot) GetCurrentCompany(user *User) (interface{}, error) {
+	botUser, err := bot.db.FindUserByTelegramId(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	dialog, err := bot.db.FindDialog(*botUser.DialogID)
+	if err != nil {
+		return nil, err
+	}
+	if dialog.Status != DIALOG_STATUS_ACTIVE {
+		bot.db.UpdateUserDialog(botUser.ID, nil)
+		bot.db.UpdateUserPause(botUser.ID, true)
+		return nil, NewUserError("Dialog was interupted")
+	}
+	var companyUserID bson.ObjectId
+	if dialog.UserA == botUser.ID {
+		companyUserID = dialog.UserB
+	} else {
+		companyUserID = dialog.UserA
+	}
+	companyUser, err := bot.db.FindUser(companyUserID)
+	if err != nil {
+		return nil, err
+	}
+	return companyUser.ChatID, nil
 }

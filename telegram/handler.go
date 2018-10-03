@@ -11,6 +11,18 @@ type HTTPHandler struct {
 	telegram *TelegramClient
 }
 
+type UserError struct {
+	message string
+}
+
+func (err UserError) Error() string {
+	return err.message
+}
+
+func NewUserError(message string) error {
+	return &UserError{message: message}
+}
+
 func NewHTTPHandler(bot *Bot, telegram *TelegramClient) *HTTPHandler {
 	return &HTTPHandler{bot, telegram}
 }
@@ -32,13 +44,10 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 			handler.bot.Start(update.Message.From, update.Message.Chat)
 			return
 		} else if cmd == "search" {
-			handler.bot.Search()
-			return
-		} else if cmd == "search" {
-			handler.bot.Search()
+			handler.bot.Search(update.Message.From)
 			return
 		} else if cmd == "pause" {
-			handler.bot.Pause()
+			handler.bot.Pause(update.Message.From)
 			return
 		} else if cmd == "status" {
 			handler.bot.Status()
@@ -54,8 +63,13 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	chatID, err := handler.bot.GetCurrentCompany()
-	err = handler.telegram.SendMessage(chatID, update.Message.Text)
+	chatID, err := handler.bot.GetCurrentCompany(update.Message.From)
+	message := update.Message.Text
+	if _, ok := err.(*UserError); ok {
+		chatID = update.Message.Chat.ID
+		message = err.Error()
+	}
+	err = handler.telegram.SendMessage(chatID, message)
 	if err != nil {
 		log.Println(err)
 	}

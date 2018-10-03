@@ -88,13 +88,19 @@ func (db Db) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) er
 	return db.mongo.DB(db.db).C("dialog_requests").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Processing": processing}})
 }
 
-func (db Db) CreateDialog(reqA DialogRequest, reqB DialogRequest) error {
+func (db Db) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error) {
+	id := bson.NewObjectId()
 	dialog := Dialog{
+		ID:      id,
 		UserA:   reqA.UserId,
 		AcceptA: false,
 		UserB:   reqB.UserId,
 		AcceptB: false,
-		Status:  DIALOG_STATUS_REQUEST,
+		Status:  DIALOG_STATUS_ACTIVE,
 	}
-	return db.mongo.DB(db.db).C("dialogs").Insert(dialog)
+	return id, db.mongo.DB(db.db).C("dialogs").Insert(dialog)
+}
+
+func (db Db) UpdateUserDialog(userId bson.ObjectId, dialogId *bson.ObjectId) error {
+	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": userId}, bson.M{"_set": bson.M{"DialogId": dialogId}})
 }
