@@ -27,5 +27,5 @@ func main() {
 	router.HandleFunc("/t/b/tetatet/updates", handler.UpdateHandler).Methods("POST")
 	router.HandleFunc("/ping", handler.PingHandler).Methods("GET")
 	log.Println("Runnig http handler...")
-	log.Fatal(http.ListenAndServe("localhost:8080", router))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", router))
 }

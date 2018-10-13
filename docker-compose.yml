@@ -7,14 +7,17 @@ services:
       - tetatetchatbot.env
     networks:
       - tetatetnet
+      - default
     depends_on:
       - mongodb
+    ports: 
+      - "8083:8080"
 
   mongodb:
     image: mongo:4
     restart: always
     volumes:
-      - ./data/db:/data/db
+      - /tmp/data/db:/data/db
     networks:
       - tetatetnet
     command: mongod --smallfiles --logpath=/dev/null
