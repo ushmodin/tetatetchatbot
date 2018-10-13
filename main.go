@@ -20,9 +20,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Connected to mongodb")
 	bot, _ := telegram.NewBot(db, client)
+	log.Println("Bot created")
 	handler, _ := telegram.NewHTTPHandler(bot, client)
 	router.HandleFunc("/t/b/tetatet/updates", handler.UpdateHandler).Methods("POST")
 	router.HandleFunc("/ping", handler.PingHandler).Methods("GET")
+	log.Println("Runnig http handler...")
 	log.Fatal(http.ListenAndServe("localhost:8080", router))
 }
