@@ -23,8 +23,8 @@ func NewUserError(message string) error {
 	return &UserError{message: message}
 }
 
-func NewHTTPHandler(bot *Bot, telegram *TelegramClient) *HTTPHandler {
-	return &HTTPHandler{bot, telegram}
+func NewHTTPHandler(bot *Bot, telegram *TelegramClient) (*HTTPHandler, error) {
+	return &HTTPHandler{bot, telegram}, nil
 }
 
 func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {

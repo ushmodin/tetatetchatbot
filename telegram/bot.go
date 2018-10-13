@@ -129,9 +129,9 @@ func (bot Bot) Search(user *User) error {
 		}
 		var companyUserID bson.ObjectId
 		if botUser.ID == dialog.UserA {
-			companyUserID := dialog.UserB
+			companyUserID = dialog.UserB
 		} else {
-			companyUserID := dialog.UserA
+			companyUserID = dialog.UserA
 		}
 		bot.db.UpdateUserPause(companyUserID, true)
 
