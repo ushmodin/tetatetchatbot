@@ -1,20 +1,25 @@
-version '3.0'
-
-networks:
-  tetatetnet:
+version: '3.0'
 
 services:
   app:
     build: .
-  env_file:
-    - tetatetchatbot.env
-  networks:
-    - networks
+    env_file:
+      - tetatetchatbot.env
+    networks:
+      - tetatetnet
+    depends_on:
+      - mongodb
 
   mongodb:
     image: mongo:4
     restart: always
-  volumes:
-    - ./data/db:/data/db
-  networks:
-    - tetatetnet
+    volumes:
+      - ./data/db:/data/db
+    networks:
+      - tetatetnet
+    command: mongod --smallfiles --logpath=/dev/null
+
+
+networks:
+  tetatetnet:
+
