@@ -1,0 +1,20 @@
+version '3.0'
+
+networks:
+  tetatetnet:
+
+services:
+  app:
+    build: .
+  env_file:
+    - tetatetchatbot.env
+  networks:
+    - networks
+
+  mongodb:
+    image: mongo:4
+    restart: always
+  volumes:
+    - ./data/db:/data/db
+  networks:
+    - tetatetnet
