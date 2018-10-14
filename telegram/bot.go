@@ -59,36 +59,40 @@ func NewBot(db *Db, telegram *TelegramClient) (*Bot, error) {
 func (bot Bot) Start(user *User, chat *Chat) error {
 	botUser, err := bot.db.FindUserByTelegramId(user.ID)
 	if bot.db.IsNotFound(err) {
-		log.Println("New User " + string(user.ID))
+		log.Printf("New User %d", user.ID)
+		botUser.ID = bson.NewObjectId()
 		botUser.TelegramID = user.ID
 		botUser.Name = user.FirstName
 		botUser.LanguageCode = user.LanguageCode
 		botUser.ChatID = chat.ID
 		botUser.Status = USER_STATUS_SEARCH
 		botUser.Pause = true
+		err = bot.db.SaveUser(botUser)
+		if err != nil {
+			return err
+		}
 	} else if err != nil {
 		return err
 	}
 
 	if botUser.DialogID != nil {
-		dialogId := *botUser.DialogID
-		dialog, err := bot.db.FindDialog(dialogId)
+		dialogID := *botUser.DialogID
+		dialog, err := bot.db.FindDialog(dialogID)
 		if bot.db.IsNotFound(err) {
-			log.Println("Dialog not found: " + dialogId)
-			botUser.DialogID = nil
+			bot.db.UpdateUserDialog(botUser.ID, nil)
+			bot.db.UpdateUserPause(botUser.ID, true)
 		}
 		dialogActive, err := bot.IsDialogActive(dialog)
 		if err != nil {
 			return err
 		}
 		if !dialogActive {
-			log.Println("Dialog not active: " + dialogId)
-			botUser.DialogID = nil
+			bot.db.UpdateUserDialog(botUser.ID, nil)
+			bot.db.UpdateUserPause(botUser.ID, true)
 		}
 	}
 
-	err = bot.db.SaveUser(botUser)
-	log.Println("User activated " + string(user.ID))
+	log.Printf("User activated %d", user.ID)
 	return err
 }
 
