@@ -37,7 +37,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 	if update.Message.Text == "" {
 		return
 	}
-
+	log.Println("Command " + update.Message.Text)
 	if update.Message.Text[:1] == "/" {
 		cmd := update.Message.Text[1:]
 		if cmd == "start" {
