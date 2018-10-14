@@ -22,29 +22,29 @@ const (
 )
 
 type Dialog struct {
-	ID      bson.ObjectId `json:"_id,omitempty"`
-	UserA   bson.ObjectId
-	AcceptA bool
-	UserB   bson.ObjectId
-	AcceptB bool
-	Status  DialogStatus
+	ID      bson.ObjectId `bson:"_id,omitempty"`
+	UserA   bson.ObjectId `bson:"UserA"`
+	AcceptA bool          `bson:"AcceptA"`
+	UserB   bson.ObjectId `bson:"UserB"`
+	AcceptB bool          `bson:"AcceptB"`
+	Status  DialogStatus  `bson:"Status"`
 }
 
 type DialogRequest struct {
-	ID         bson.ObjectId `json:"_id,omitempty"`
-	UserId     bson.ObjectId
-	Processing bool
+	ID         bson.ObjectId `bson:"_id,omitempty"`
+	UserId     bson.ObjectId `bson:"UserId"`
+	Processing bool          `bson:"Processing"`
 }
 
 type BotUser struct {
-	ID           bson.ObjectId `json:"_id,omitempty"`
-	TelegramID   int
-	Name         string
-	LanguageCode string
-	Status       UserStatus
-	Pause        bool
-	ChatID       int64
-	DialogID     *bson.ObjectId
+	ID           bson.ObjectId  `bson:"_id,omitempty"`
+	TelegramID   int            `bson:"TelegramID"`
+	Name         string         `bson:"Name"`
+	LanguageCode string         `bson:"LanguageCode"`
+	Status       UserStatus     `bson:"Status"`
+	Pause        bool           `bson:"Pause"`
+	ChatID       int64          `bson:"ChatID"`
+	DialogID     *bson.ObjectId `bson:"DialogID"`
 }
 
 const (
