@@ -24,8 +24,8 @@ type Db interface {
 }
 
 type MessageService interface {
-	SendServiceMessage(chatId interface{}, text string) error
-	SendCompanyMessage(chatId interface{}, text string) error
+	SendServiceMessage(chatId int64, text string) error
+	SendCompanyMessage(chatId int64, text string) error
 }
 
 type Bot struct {
@@ -243,19 +243,19 @@ func (bot Bot) Who() error {
 	return nil
 }
 
-func (bot Bot) GetCurrentCompany(user *User) (interface{}, error) {
+func (bot Bot) GetCurrentCompany(user *User) (int64, error) {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	dialog, err := bot.db.FindDialog(*botUser.DialogID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if dialog.Status != DIALOG_STATUS_ACTIVE {
 		bot.db.UpdateUserDialog(botUser.ID, nil)
 		bot.db.UpdateUserPause(botUser.ID, true)
-		return nil, NewUserError("Dialog was interupted")
+		return 0, NewUserError("Dialog was interupted")
 	}
 	var companyUserID bson.ObjectId
 	if dialog.UserA == botUser.ID {
@@ -265,7 +265,7 @@ func (bot Bot) GetCurrentCompany(user *User) (interface{}, error) {
 	}
 	companyUser, err := bot.db.FindUser(companyUserID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	return companyUser.ChatID, nil
 }

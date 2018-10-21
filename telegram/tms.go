@@ -4,15 +4,15 @@ import (
 	"gopkg.in/resty.v1"
 )
 
-type TelegramClient struct {
+type telegramClient struct {
 	appKey string
 }
 
-func NewTelegramClient(appKey string) (*TelegramClient, error) {
-	return &TelegramClient{appKey: appKey}, nil
+func NewTelegramClient(appKey string) (*telegramClient, error) {
+	return &telegramClient{appKey: appKey}, nil
 }
 
-func (client TelegramClient) SendServiceMessage(chatId interface{}, text string) error {
+func (client telegramClient) SendServiceMessage(chatId int64, text string) error {
 	_, err := resty.R().
 		SetBody(struct {
 			ChatId interface{} `json:"chat_id"`
@@ -22,7 +22,7 @@ func (client TelegramClient) SendServiceMessage(chatId interface{}, text string)
 	return err
 }
 
-func (client TelegramClient) SendCompanyMessage(chatId interface{}, text string) error {
+func (client telegramClient) SendCompanyMessage(chatId int64, text string) error {
 	_, err := resty.R().
 		SetBody(struct {
 			ChatId interface{} `json:"chat_id"`
