@@ -41,7 +41,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 	if update.Message.Text[:1] == "/" {
 		cmd := update.Message.Text[1:]
 		if cmd == "start" {
-			handler.bot.Start(update.Message.From, update.Message.Chat)
+			handler.bot.Start(*update.Message.From, *update.Message.Chat)
 			return
 		} else if cmd == "search" {
 			handler.bot.Search(update.Message.From)

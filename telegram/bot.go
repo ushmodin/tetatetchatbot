@@ -56,7 +56,7 @@ func NewBot(db Db, telegram *TelegramClient) (*Bot, error) {
 	return &Bot{db: db, telegram: telegram}, nil
 }
 
-func (bot Bot) Start(user *User, chat *Chat) error {
+func (bot Bot) Start(user User, chat Chat) error {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if bot.db.IsNotFound(err) {
 		log.Printf("New User %d", user.ID)

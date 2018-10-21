@@ -5,22 +5,6 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type Db interface {
-	FindUserByTelegramID(id int) (BotUser, error)
-	IsNotFound(err error) bool
-	FindUser(id bson.ObjectId) (BotUser, error)
-	SaveUser(user BotUser) error
-	FindDialog(id bson.ObjectId) (Dialog, error)
-	DeleteDialog(id bson.ObjectId) error
-	UpdateUserStatus(id bson.ObjectId, status UserStatus) error
-	UpdateUserPause(id bson.ObjectId, flag bool) error
-	StartDialog(userID bson.ObjectId) error
-	FindNextDialogRequest() (DialogRequest, error)
-	CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error)
-	UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error
-	UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error
-}
-
 type MgoDb struct {
 	mongo *mgo.Session
 	db    string
