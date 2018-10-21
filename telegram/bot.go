@@ -8,7 +8,7 @@ import (
 )
 
 type Bot struct {
-	db       *Db
+	db       Db
 	telegram *TelegramClient
 }
 
@@ -32,7 +32,7 @@ type Dialog struct {
 
 type DialogRequest struct {
 	ID         bson.ObjectId `bson:"_id,omitempty"`
-	UserId     bson.ObjectId `bson:"UserId"`
+	UserID     bson.ObjectId `bson:"UserId"`
 	Processing bool          `bson:"Processing"`
 }
 
@@ -52,12 +52,12 @@ const (
 	USER_STATUS_COMMUNICATION UserStatus = "C"
 )
 
-func NewBot(db *Db, telegram *TelegramClient) (*Bot, error) {
+func NewBot(db Db, telegram *TelegramClient) (*Bot, error) {
 	return &Bot{db: db, telegram: telegram}, nil
 }
 
 func (bot Bot) Start(user *User, chat *Chat) error {
-	botUser, err := bot.db.FindUserByTelegramId(user.ID)
+	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if bot.db.IsNotFound(err) {
 		log.Printf("New User %d", user.ID)
 		botUser.ID = bson.NewObjectId()
@@ -118,10 +118,11 @@ func (bot Bot) IsDialogActive(dialog Dialog) (bool, error) {
 }
 
 func (bot Bot) Search(user *User) error {
-	botUser, err := bot.db.FindUserByTelegramId(user.ID)
+	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return err
 	}
+	log.Printf("User go to search mode %d", user.ID)
 	if botUser.DialogID != nil {
 		dialog, err := bot.db.FindDialog(*botUser.DialogID)
 		if err != nil {
@@ -131,20 +132,24 @@ func (bot Bot) Search(user *User) error {
 		if err != nil {
 			return err
 		}
+		log.Printf("Dialog %s marked as deleted", dialog.ID)
 		var companyUserID bson.ObjectId
 		if botUser.ID == dialog.UserA {
 			companyUserID = dialog.UserB
 		} else {
 			companyUserID = dialog.UserA
 		}
-		bot.db.UpdateUserPause(companyUserID, true)
-
+		err = bot.db.UpdateUserPause(companyUserID, true)
+		if err != nil {
+			return err
+		}
+		log.Printf("User %s go to pause mode", companyUserID)
 	}
 	err = bot.db.UpdateUserStatus(botUser.ID, USER_STATUS_SEARCH)
 	if err != nil {
 		return err
 	}
-	log.Println("Start dialog request")
+	log.Printf("Start dialog request for user %s", botUser.ID)
 	err = bot.db.StartDialog(botUser.ID)
 	if err != nil {
 		return err
@@ -181,11 +186,11 @@ func (bot Bot) JoinRequests() error {
 			if err != nil {
 				return
 			}
-			err = bot.db.UpdateUserDialog(reqA.UserId, &dialogId)
+			err = bot.db.UpdateUserDialog(reqA.UserID, &dialogId)
 			if err != nil {
 				return
 			}
-			err = bot.db.UpdateUserDialog(reqB.UserId, &dialogId)
+			err = bot.db.UpdateUserDialog(reqB.UserID, &dialogId)
 			if err != nil {
 				return
 			}
@@ -197,7 +202,7 @@ func (bot Bot) JoinRequests() error {
 }
 
 func (bot Bot) Pause(user *User) error {
-	botUser, err := bot.db.FindUserByTelegramId(user.ID)
+	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return err
 	}
@@ -218,7 +223,7 @@ func (bot Bot) Who() error {
 }
 
 func (bot Bot) GetCurrentCompany(user *User) (interface{}, error) {
-	botUser, err := bot.db.FindUserByTelegramId(user.ID)
+	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return nil, err
 	}

@@ -5,76 +5,92 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
-type Db struct {
+type Db interface {
+	FindUserByTelegramID(id int) (BotUser, error)
+	IsNotFound(err error) bool
+	FindUser(id bson.ObjectId) (BotUser, error)
+	SaveUser(user BotUser) error
+	FindDialog(id bson.ObjectId) (Dialog, error)
+	DeleteDialog(id bson.ObjectId) error
+	UpdateUserStatus(id bson.ObjectId, status UserStatus) error
+	UpdateUserPause(id bson.ObjectId, flag bool) error
+	StartDialog(userID bson.ObjectId) error
+	FindNextDialogRequest() (DialogRequest, error)
+	CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error)
+	UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error
+	UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error
+}
+
+type MgoDb struct {
 	mongo *mgo.Session
 	db    string
 }
 
-// NewDb create new database object
+// NewMgoDb create new database object
 // con mongodb connection string, ex: host:port
-func NewDb(con string, db string) (*Db, error) {
+func NewMgoDb(con string, db string) (*MgoDb, error) {
 	mongo, err := mgo.Dial(con)
 	if err != nil {
 		return nil, err
 	}
-	return &Db{mongo: mongo, db: db}, nil
+	return &MgoDb{mongo: mongo, db: db}, nil
 }
 
 // Close Destroy object
-func (db Db) Close() {
+func (db MgoDb) Close() {
 	db.mongo.Close()
 }
 
-func (db Db) Save(collection string, obj interface{}) error {
+func (db MgoDb) Save(collection string, obj interface{}) error {
 	return db.mongo.DB(db.db).C(collection).Insert(obj)
 }
 
-func (db Db) IsNotFound(err error) bool {
+func (db MgoDb) IsNotFound(err error) bool {
 	return err == mgo.ErrNotFound
 }
 
-func (db Db) FindUserByTelegramId(id int) (BotUser, error) {
+func (db MgoDb) FindUserByTelegramID(id int) (BotUser, error) {
 	var user BotUser
 	err := db.mongo.DB(db.db).C("users").Find(bson.M{"TelegramID": id}).One(&user)
 	return user, err
 }
 
-func (db Db) FindUser(id bson.ObjectId) (BotUser, error) {
+func (db MgoDb) FindUser(id bson.ObjectId) (BotUser, error) {
 	var user BotUser
 	err := db.mongo.DB(db.db).C("users").Find(bson.M{"_id": id}).One(&user)
 	return user, err
 }
 
-func (db Db) SaveUser(user BotUser) error {
+func (db MgoDb) SaveUser(user BotUser) error {
 	return db.mongo.DB(db.db).C("users").Insert(user)
 }
 
-func (db Db) FindDialog(id bson.ObjectId) (Dialog, error) {
+func (db MgoDb) FindDialog(id bson.ObjectId) (Dialog, error) {
 	var dialog Dialog
 	err := db.mongo.DB(db.db).C("dialogs").Find(bson.M{"_id": id}).One(&dialog)
 	return dialog, err
 }
 
-func (db Db) DeleteDialog(id bson.ObjectId) error {
+func (db MgoDb) DeleteDialog(id bson.ObjectId) error {
 	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": DIALOG_STATUS_DELETED}})
 }
 
-func (db Db) UpdateUserStatus(id bson.ObjectId, status UserStatus) error {
+func (db MgoDb) UpdateUserStatus(id bson.ObjectId, status UserStatus) error {
 	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": status}})
 }
 
-func (db Db) UpdateUserPause(id bson.ObjectId, flag bool) error {
+func (db MgoDb) UpdateUserPause(id bson.ObjectId, flag bool) error {
 	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Pause": flag}})
 }
 
-func (db Db) StartDialog(userId bson.ObjectId) error {
+func (db MgoDb) StartDialog(userID bson.ObjectId) error {
 	return db.mongo.DB(db.db).C("dialog_requests").Insert(DialogRequest{
-		UserId:     userId,
+		UserID:     userID,
 		Processing: false,
 	})
 }
 
-func (db Db) FindNextDialogRequest() (DialogRequest, error) {
+func (db MgoDb) FindNextDialogRequest() (DialogRequest, error) {
 	var req DialogRequest
 
 	_, err := db.mongo.DB(db.db).C("dialog_requests").Find(bson.M{"Processing": false}).Apply(mgo.Change{
@@ -84,23 +100,23 @@ func (db Db) FindNextDialogRequest() (DialogRequest, error) {
 	return req, err
 }
 
-func (db Db) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error {
+func (db MgoDb) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error {
 	return db.mongo.DB(db.db).C("dialog_requests").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Processing": processing}})
 }
 
-func (db Db) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error) {
+func (db MgoDb) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error) {
 	id := bson.NewObjectId()
 	dialog := Dialog{
 		ID:      id,
-		UserA:   reqA.UserId,
+		UserA:   reqA.UserID,
 		AcceptA: false,
-		UserB:   reqB.UserId,
+		UserB:   reqB.UserID,
 		AcceptB: false,
 		Status:  DIALOG_STATUS_ACTIVE,
 	}
 	return id, db.mongo.DB(db.db).C("dialogs").Insert(dialog)
 }
 
-func (db Db) UpdateUserDialog(userId bson.ObjectId, dialogId *bson.ObjectId) error {
-	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": userId}, bson.M{"_set": bson.M{"DialogId": dialogId}})
+func (db MgoDb) UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error {
+	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": userID}, bson.M{"_set": bson.M{"DialogID": dialogID}})
 }

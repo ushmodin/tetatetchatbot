@@ -16,7 +16,7 @@ func main() {
 		log.Fatal("Telegram token not specified")
 	}
 	client, _ := telegram.NewTelegramClient(token)
-	db, err := telegram.NewDb("mongodb:27017", "tetatetchatbot")
+	db, err := telegram.NewMgoDb("mongodb:27017", "tetatetchatbot")
 	if err != nil {
 		log.Fatal(err)
 	}
