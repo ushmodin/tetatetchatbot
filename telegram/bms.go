@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/binary"
 	"encoding/json"
+	"log"
 
 	"github.com/boltdb/bolt"
 )
@@ -34,6 +35,10 @@ func NewBoltMessageService() (*BoltMessageService, error) {
 	return &BoltMessageService{bolt: db}, nil
 }
 
+func (service *BoltMessageService) Close() {
+	service.bolt.Close()
+}
+
 func itob(v uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, v)
@@ -49,6 +54,7 @@ func (service *BoltMessageService) SendCompanyMessage(chatId int64, text string)
 }
 
 func (service *BoltMessageService) sendMessage(chatId int64, typ string, text string) error {
+	log.Printf("Send message to chat %d", chatId)
 	data, err := json.Marshal(message{
 		ChatID: chatId,
 		Type:   typ,
@@ -65,4 +71,34 @@ func (service *BoltMessageService) sendMessage(chatId int64, typ string, text st
 		}
 		return b.Put(itob(id), data)
 	})
+}
+
+func (service *BoltMessageService) Next10() ([]message, error) {
+	values := []message{}
+	err := service.bolt.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("messages"))
+		cur := b.Cursor()
+		i := 0
+		type keyType []byte
+		keys := []keyType{}
+		for k, v := cur.First(); k != nil && i < 10; k, v = cur.Next() {
+			var t message
+			if err := json.Unmarshal(v, &t); err != nil {
+				return err
+			}
+			values = append(values, t)
+			keys = append(keys, k)
+			i++
+		}
+		for _, key := range keys {
+			if err := b.Delete(key); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return values, err
+	}
+	return values, nil
 }

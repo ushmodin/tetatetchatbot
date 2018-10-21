@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -9,7 +10,13 @@ func TestStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bot, err := NewBot(db, nil)
+	defer db.Close()
+	ms, err := NewBoltMessageService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ms.Close()
+	bot, err := NewBot(db, ms)
 	user := User{
 		ID:           42,
 		FirstName:    "Ivan",
@@ -28,5 +35,16 @@ func TestStart(t *testing.T) {
 	err = bot.Start(user, chat)
 	if err != nil {
 		t.Fatal(err)
+	}
+	messages, err := ms.Next10()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(len(messages))
+	if len(messages) != 2 {
+		t.Fatal("Incorrect message count")
+	}
+	if messages[0].ChatID != 100500 {
+		t.Fatal("Incorrect response message")
 	}
 }

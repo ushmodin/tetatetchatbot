@@ -114,6 +114,9 @@ func (bot Bot) Start(user User, chat Chat) error {
 	}
 
 	log.Printf("User activated %d", user.ID)
+	if err = bot.messageService.SendServiceMessage(chat.ID, "Hello, "+user.UserName); err != nil {
+		return err
+	}
 	return err
 }
 
