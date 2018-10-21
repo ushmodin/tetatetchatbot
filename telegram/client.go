@@ -17,11 +17,17 @@ func (client TelegramClient) SendServiceMessage(chatId interface{}, text string)
 		SetBody(struct {
 			ChatId interface{} `json:"chat_id"`
 			Text   string      `json:"text"`
-		}{ChatId: chatId, Text: text}).
+		}{ChatId: chatId, Text: "BOT: " + text}).
 		Post("https://api.telegram.org/bot" + client.appKey + "/sendMessage")
 	return err
 }
 
 func (client TelegramClient) SendCompanyMessage(chatId interface{}, text string) error {
-	return client.SendServiceMessage(chatId, text)
+	_, err := resty.R().
+		SetBody(struct {
+			ChatId interface{} `json:"chat_id"`
+			Text   string      `json:"text"`
+		}{ChatId: chatId, Text: "COMPANY: " + text}).
+		Post("https://api.telegram.org/bot" + client.appKey + "/sendMessage")
+	return err
 }
