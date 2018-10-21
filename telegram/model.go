@@ -2,25 +2,7 @@ package telegram
 
 import (
 	"encoding/json"
-
-	"github.com/globalsign/mgo/bson"
 )
-
-type Db interface {
-	FindUserByTelegramID(id int) (BotUser, error)
-	IsNotFound(err error) bool
-	FindUser(id bson.ObjectId) (BotUser, error)
-	SaveUser(user BotUser) error
-	FindDialog(id bson.ObjectId) (Dialog, error)
-	DeleteDialog(id bson.ObjectId) error
-	UpdateUserStatus(userID bson.ObjectId, status UserStatus) error
-	UpdateUserPause(userID bson.ObjectId, flag bool) error
-	UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error
-	StartDialog(userID bson.ObjectId) error
-	FindNextDialogRequest() (DialogRequest, error)
-	CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error)
-	UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error
-}
 
 type APIResponse struct {
 	Ok          bool                `json:"ok"`

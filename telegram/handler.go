@@ -7,8 +7,8 @@ import (
 )
 
 type HTTPHandler struct {
-	bot      *Bot
-	telegram *TelegramClient
+	bot            *Bot
+	messageService MessageService
 }
 
 type UserError struct {
@@ -23,8 +23,8 @@ func NewUserError(message string) error {
 	return &UserError{message: message}
 }
 
-func NewHTTPHandler(bot *Bot, telegram *TelegramClient) (*HTTPHandler, error) {
-	return &HTTPHandler{bot, telegram}, nil
+func NewHTTPHandler(bot *Bot, messageService MessageService) (*HTTPHandler, error) {
+	return &HTTPHandler{bot, messageService}, nil
 }
 
 func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 			handler.bot.Who()
 			return
 		} else {
-			err = handler.telegram.SendMessage(update.Message.Chat.ID, "BOT: Unknow command "+cmd)
+			err = handler.messageService.SendServiceMessage(update.Message.Chat.ID, "BOT: Unknow command "+cmd)
 			if err != nil {
 				log.Println(err)
 			}
@@ -69,7 +69,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 		chatID = update.Message.Chat.ID
 		message = err.Error()
 	}
-	err = handler.telegram.SendMessage(chatID, message)
+	err = handler.messageService.SendCompanyMessage(chatID, message)
 	if err != nil {
 		log.Println(err)
 	}

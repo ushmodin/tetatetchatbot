@@ -25,4 +25,8 @@ func TestStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = bot.Start(user, chat)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
