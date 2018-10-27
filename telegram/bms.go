@@ -75,6 +75,9 @@ func (service *BoltMessageService) sendMessage(chatId int64, typ string, text st
 
 func (service *BoltMessageService) Next10() ([]message, error) {
 	values := []message{}
+	if service == nil {
+		log.Panic("Service is nil")
+	}
 	err := service.bolt.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("messages"))
 		cur := b.Cursor()

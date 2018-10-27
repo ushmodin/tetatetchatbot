@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"time"
+
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -71,13 +73,19 @@ func (db MgoDb) StartDialog(userID bson.ObjectId) error {
 	return db.mongo.DB(db.db).C("dialog_requests").Insert(DialogRequest{
 		UserID:     userID,
 		Processing: false,
+		Created:    time.Now().Unix(),
 	})
+}
+
+func (db MgoDb) BackwardRequestDialog(dlgReq DialogRequest) error {
+	dlgReq.Created = time.Now().Unix()
+	return db.mongo.DB(db.db).C("dialog_requests").Insert(dlgReq)
 }
 
 func (db MgoDb) FindNextDialogRequest() (DialogRequest, error) {
 	var req DialogRequest
 
-	_, err := db.mongo.DB(db.db).C("dialog_requests").Find(bson.M{"Processing": false}).Apply(mgo.Change{
+	_, err := db.mongo.DB(db.db).C("dialog_requests").Find(bson.M{"Processing": false}).Sort("Created").Limit(1).Apply(mgo.Change{
 		Update: bson.M{"$set": bson.M{"Processing": true}},
 	}, &req)
 

@@ -2,21 +2,48 @@ package telegram
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"testing"
 )
 
-func TestStart(t *testing.T) {
-	db, err := NewBoltDb()
+var db *BoltDb
+var ms *BoltMessageService
+var bot *Bot
+
+func setUp() error {
+	var err error
+	db, err = NewBoltDb()
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
+	ms, err = NewBoltMessageService()
+	if err != nil {
+		return err
+	}
+	bot, err = NewBot(db, ms)
+	return err
+}
+
+func tearDown() error {
 	defer db.Close()
-	ms, err := NewBoltMessageService()
-	if err != nil {
-		t.Fatal(err)
-	}
 	defer ms.Close()
-	bot, err := NewBot(db, ms)
+	os.Remove("bms.db")
+	os.Remove("tetatetchatbot.db")
+	return nil
+}
+
+func TestMain(m *testing.M) {
+	err := setUp()
+	if err != nil {
+		log.Panic(err)
+	}
+	retCode := m.Run()
+	tearDown()
+	os.Exit(retCode)
+}
+
+func TestStart(t *testing.T) {
 	user := User{
 		ID:           42,
 		FirstName:    "Ivan",
@@ -28,7 +55,7 @@ func TestStart(t *testing.T) {
 	chat := Chat{
 		ID: 100500,
 	}
-	err = bot.Start(user, chat)
+	err := bot.Start(user, chat)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,6 +63,11 @@ func TestStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	if ms == nil {
+		log.Panic("Service is nil2")
+	}
+
 	messages, err := ms.Next10()
 	if err != nil {
 		t.Fatal(err)

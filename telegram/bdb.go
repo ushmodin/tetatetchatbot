@@ -233,6 +233,10 @@ func (db *BoltDb) FindNextDialogRequest() (DialogRequest, error) {
 	return DialogRequest{}, errors.New("Not implemeted yet")
 }
 
+func (db *BoltDb) BackwardRequestDialog(dlgReq DialogRequest) error {
+	return errors.New("Not implemeted yet")
+}
+
 func (db *BoltDb) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error {
 	return errors.New("Not implemeted yet")
 }

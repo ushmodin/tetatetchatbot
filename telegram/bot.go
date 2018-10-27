@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"log"
-	"time"
 
 	"github.com/globalsign/mgo/bson"
 )
@@ -21,6 +20,7 @@ type Db interface {
 	FindNextDialogRequest() (DialogRequest, error)
 	CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error)
 	UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error
+	BackwardRequestDialog(dlgReq DialogRequest) error
 }
 
 type MessageService interface {
@@ -55,6 +55,7 @@ type DialogRequest struct {
 	ID         bson.ObjectId `bson:"_id,omitempty"`
 	UserID     bson.ObjectId `bson:"UserId"`
 	Processing bool          `bson:"Processing"`
+	Created    int64         `bson:"Created"`
 }
 
 type BotUser struct {
@@ -181,48 +182,45 @@ func (bot Bot) Search(user *User) error {
 	return nil
 }
 
-func (bot Bot) JoinRequests() error {
-	for {
-		reqA, err := bot.db.FindNextDialogRequest()
-		if bot.db.IsNotFound(err) {
-			time.Sleep(1 * time.Second)
-			continue
-		} else if err != nil {
-			return nil
-		}
-		log.Println("Request A found " + reqA.ID)
-
-		go func() {
-			var reqB DialogRequest
-			for {
-				reqB, err = bot.db.FindNextDialogRequest()
-				if bot.db.IsNotFound(err) {
-					time.Sleep(1 * time.Second)
-					continue
-				} else if err != nil {
-					bot.db.UpdateDialogRequestProcessing(reqA.ID, false)
-					return
-				}
-				log.Println("Request B found " + reqA.ID)
-				break
-			}
-			dialogId, err := bot.db.CreateDialog(reqA, reqB)
-			if err != nil {
-				return
-			}
-			err = bot.db.UpdateUserDialog(reqA.UserID, &dialogId)
-			if err != nil {
-				return
-			}
-			err = bot.db.UpdateUserDialog(reqB.UserID, &dialogId)
-			if err != nil {
-				return
-			}
-			log.Println("Dialog created")
-		}()
-		break
+func (bot Bot) JoinRequests() (bool, error) {
+	reqA, err := bot.db.FindNextDialogRequest()
+	if bot.db.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
 	}
-	return nil
+	log.Println("Request A found " + reqA.ID)
+
+	var reqB DialogRequest
+	reqB, err = bot.db.FindNextDialogRequest()
+	if bot.db.IsNotFound(err) {
+		err = bot.db.BackwardRequestDialog(reqA)
+		return false, err
+	} else if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		return false, err
+	}
+	log.Println("Request B found " + reqA.ID)
+	dialogID, err := bot.db.CreateDialog(reqA, reqB)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return false, err
+	}
+	err = bot.db.UpdateUserDialog(reqA.UserID, &dialogID)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return false, err
+	}
+	err = bot.db.UpdateUserDialog(reqB.UserID, &dialogID)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return false, err
+	}
+	log.Printf("Dialog for %d and %d created", reqA.UserID, reqB.UserID)
+	return true, nil
 }
 
 func (bot Bot) Pause(user *User) error {
