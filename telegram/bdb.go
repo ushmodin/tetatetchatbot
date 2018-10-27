@@ -32,6 +32,9 @@ func NewBoltDb() (*BoltDb, error) {
 		if _, err = tx.CreateBucketIfNotExists([]byte("dialogs")); err != nil {
 			return err
 		}
+		if _, err = tx.CreateBucketIfNotExists([]byte("dialog_requests")); err != nil {
+			return err
+		}
 		return nil
 	})
 	return &BoltDb{bolt: db}, nil
@@ -159,7 +162,7 @@ func (db *BoltDb) UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId
 		b := tx.Bucket([]byte("users"))
 		return b.Put([]byte(userID), data)
 	})
-	return nil
+	return err
 }
 func (db *BoltDb) UpdateUserPause(userID bson.ObjectId, flag bool) error {
 	var data []byte
@@ -214,15 +217,43 @@ func (db *BoltDb) UpdateUserStatus(userID bson.ObjectId, status UserStatus) erro
 		b := tx.Bucket([]byte("users"))
 		return b.Put([]byte(userID), data)
 	})
-	return nil
+	return err
 }
 
 func (db *BoltDb) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error) {
-	return "", errors.New("Not implemeted yet")
+	dlgID := bson.NewObjectId()
+	return dlgID, db.bolt.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("dialogs"))
+		data, err := json.Marshal(Dialog{
+			ID:      dlgID,
+			UserA:   reqA.UserID,
+			AcceptA: false,
+			UserB:   reqB.UserID,
+			AcceptB: false,
+			Status:  DIALOG_STATUS_ACTIVE,
+		})
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(dlgID), data)
+	})
 }
 
 func (db *BoltDb) StartDialog(userID bson.ObjectId) error {
-	return errors.New("Not implemeted yet")
+	return db.bolt.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("dialog_requests"))
+		id, err := b.NextSequence()
+		if err != nil {
+			return err
+		}
+		data, err := json.Marshal(DialogRequest{
+			UserID: userID,
+		})
+		if err != nil {
+			return err
+		}
+		return b.Put(itob(id), []byte(data))
+	})
 }
 
 func (db *BoltDb) DeleteDialog(id bson.ObjectId) error {
@@ -230,11 +261,33 @@ func (db *BoltDb) DeleteDialog(id bson.ObjectId) error {
 }
 
 func (db *BoltDb) FindNextDialogRequest() (DialogRequest, error) {
-	return DialogRequest{}, errors.New("Not implemeted yet")
+	var dlgReq DialogRequest
+	return dlgReq, db.bolt.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("dialog_requests"))
+		cur := b.Cursor()
+		key, val := cur.First()
+		if key == nil {
+			return NotFoundError
+		}
+		return json.Unmarshal(val, &dlgReq)
+	})
 }
 
 func (db *BoltDb) BackwardRequestDialog(dlgReq DialogRequest) error {
-	return errors.New("Not implemeted yet")
+	return db.bolt.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("dialog_requests"))
+		id, err := b.NextSequence()
+		if err != nil {
+			return err
+		}
+		data, err := json.Marshal(DialogRequest{
+			UserID: dlgReq.UserID,
+		})
+		if err != nil {
+			return err
+		}
+		return b.Put(itob(id), []byte(data))
+	})
 }
 
 func (db *BoltDb) UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error {

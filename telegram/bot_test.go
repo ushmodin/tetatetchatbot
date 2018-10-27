@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"testing"
 )
@@ -78,5 +79,49 @@ func TestStart(t *testing.T) {
 	}
 	if messages[0].ChatID != 100500 {
 		t.Fatal("Incorrect response message")
+	}
+}
+
+func TestJoinRequests(t *testing.T) {
+	userA := User{
+		ID:           rand.Int(),
+		FirstName:    "Ivan",
+		LastName:     "Ivanov",
+		UserName:     "IvanovIvan",
+		LanguageCode: "RU",
+		IsBot:        false,
+	}
+	chatA := Chat{
+		ID: rand.Int63(),
+	}
+	userB := User{
+		ID:           rand.Int(),
+		FirstName:    "Petr",
+		LastName:     "Petrov",
+		UserName:     "PetrPetrov",
+		LanguageCode: "RU",
+		IsBot:        false,
+	}
+	chatB := Chat{
+		ID: rand.Int63(),
+	}
+	if err := bot.Start(userA, chatA); err != nil {
+		t.Fatal(err)
+	}
+	if err := bot.Start(userB, chatB); err != nil {
+		t.Fatal(err)
+	}
+	if err := bot.Search(userA); err != nil {
+		t.Fatal(err)
+	}
+	if err := bot.Search(userB); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := bot.JoinRequests()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("Requests not joined")
 	}
 }

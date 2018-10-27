@@ -44,7 +44,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 			handler.bot.Start(*update.Message.From, *update.Message.Chat)
 			return
 		} else if cmd == "search" {
-			handler.bot.Search(update.Message.From)
+			handler.bot.Search(*update.Message.From)
 			return
 		} else if cmd == "pause" {
 			handler.bot.Pause(update.Message.From)

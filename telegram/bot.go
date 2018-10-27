@@ -142,7 +142,7 @@ func (bot Bot) IsDialogActive(dialog Dialog) (bool, error) {
 	return true, nil
 }
 
-func (bot Bot) Search(user *User) error {
+func (bot Bot) Search(user User) error {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return err
