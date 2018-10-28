@@ -213,9 +213,7 @@ func (bot Bot) createDialog(reqA, reqB DialogRequest) error {
 	if err := bot.messageService.SendServiceMessage(userA.ChatID, "I found company for you. Dialog started"); err != nil {
 		return err
 	}
-	err = bot.messageService.SendServiceMessage(userB.ChatID, "I found company for you. Dialog started")
-
-	return err
+	return bot.messageService.SendServiceMessage(userB.ChatID, "I found company for you. Dialog started")
 }
 
 func (bot Bot) JoinRequests() (bool, error) {
@@ -241,15 +239,28 @@ func (bot Bot) JoinRequests() (bool, error) {
 	return true, err
 }
 
-func (bot Bot) Pause(user *User) error {
+func (bot Bot) Pause(user User) error {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return err
 	}
 
-	err = bot.db.UpdateUserPause(botUser.ID, !botUser.Pause)
+	value := !botUser.Pause
+	err = bot.db.UpdateUserPause(botUser.ID, value)
 	if err != nil {
 		return err
+	}
+
+	if value {
+		companyChatID, err := bot.GetCurrentCompany(user)
+		if err != nil {
+			return err
+		}
+		if companyChatID != 0 {
+			if err := bot.messageService.SendServiceMessage(companyChatID, "You company go to pause"); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -262,10 +273,13 @@ func (bot Bot) Who() error {
 	return nil
 }
 
-func (bot Bot) GetCurrentCompany(user *User) (int64, error) {
+func (bot Bot) GetCurrentCompany(user User) (int64, error) {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
 		return 0, err
+	}
+	if botUser.DialogID == nil {
+		return 0, nil
 	}
 	dialog, err := bot.db.FindDialog(*botUser.DialogID)
 	if err != nil {
@@ -274,7 +288,7 @@ func (bot Bot) GetCurrentCompany(user *User) (int64, error) {
 	if dialog.Status != DIALOG_STATUS_ACTIVE {
 		bot.db.UpdateUserDialog(botUser.ID, nil)
 		bot.db.UpdateUserPause(botUser.ID, true)
-		return 0, NewUserError("Dialog was interupted")
+		return 0, nil
 	}
 	var companyUserID bson.ObjectId
 	if dialog.UserA == botUser.ID {
