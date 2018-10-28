@@ -124,4 +124,12 @@ func TestJoinRequests(t *testing.T) {
 	if !ok {
 		t.Fatal("Requests not joined")
 	}
+	messages, err := ms.Next10()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(messages) != 4 {
+		t.Fatal("Incorrect message count")
+	}
+
 }

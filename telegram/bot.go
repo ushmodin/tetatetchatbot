@@ -182,6 +182,42 @@ func (bot Bot) Search(user User) error {
 	return nil
 }
 
+func (bot Bot) createDialog(reqA, reqB DialogRequest) error {
+	dialogID, err := bot.db.CreateDialog(reqA, reqB)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return err
+	}
+	err = bot.db.UpdateUserDialog(reqA.UserID, &dialogID)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return err
+	}
+	err = bot.db.UpdateUserDialog(reqB.UserID, &dialogID)
+	if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		bot.db.BackwardRequestDialog(reqB)
+		return err
+	}
+	log.Printf("Dialog for %s and %s created", reqA.UserID, reqB.UserID)
+	userA, err := bot.db.FindUser(reqA.UserID)
+	if err != nil {
+		return err
+	}
+	userB, err := bot.db.FindUser(reqB.UserID)
+	if err != nil {
+		return err
+	}
+	if err := bot.messageService.SendServiceMessage(userA.ChatID, "I found company for you. Dialog started"); err != nil {
+		return err
+	}
+	err = bot.messageService.SendServiceMessage(userB.ChatID, "I found company for you. Dialog started")
+
+	return err
+}
+
 func (bot Bot) JoinRequests() (bool, error) {
 	reqA, err := bot.db.FindNextDialogRequest()
 	if bot.db.IsNotFound(err) {
@@ -201,26 +237,8 @@ func (bot Bot) JoinRequests() (bool, error) {
 		return false, err
 	}
 	log.Println("Request B found " + reqA.ID)
-	dialogID, err := bot.db.CreateDialog(reqA, reqB)
-	if err != nil {
-		bot.db.BackwardRequestDialog(reqA)
-		bot.db.BackwardRequestDialog(reqB)
-		return false, err
-	}
-	err = bot.db.UpdateUserDialog(reqA.UserID, &dialogID)
-	if err != nil {
-		bot.db.BackwardRequestDialog(reqA)
-		bot.db.BackwardRequestDialog(reqB)
-		return false, err
-	}
-	err = bot.db.UpdateUserDialog(reqB.UserID, &dialogID)
-	if err != nil {
-		bot.db.BackwardRequestDialog(reqA)
-		bot.db.BackwardRequestDialog(reqB)
-		return false, err
-	}
-	log.Printf("Dialog for %s and %s created", reqA.UserID, reqB.UserID)
-	return true, nil
+	err = bot.createDialog(reqA, reqB)
+	return true, err
 }
 
 func (bot Bot) Pause(user *User) error {
