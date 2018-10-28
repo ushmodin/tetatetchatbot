@@ -219,7 +219,7 @@ func (bot Bot) JoinRequests() (bool, error) {
 		bot.db.BackwardRequestDialog(reqB)
 		return false, err
 	}
-	log.Printf("Dialog for %d and %d created", reqA.UserID, reqB.UserID)
+	log.Printf("Dialog for %s and %s created", reqA.UserID, reqB.UserID)
 	return true, nil
 }
 
