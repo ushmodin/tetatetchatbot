@@ -147,6 +147,9 @@ func (bot Bot) Search(user User) error {
 	if err != nil {
 		return err
 	}
+	if botUser.Status == USER_STATUS_SEARCH {
+		return bot.messageService.SendServiceMessage(botUser.ChatID, "I'm still search")
+	}
 	log.Printf("User go to search mode %d", user.ID)
 	if botUser.DialogID != nil {
 		dialog, err := bot.db.FindDialog(*botUser.DialogID)
