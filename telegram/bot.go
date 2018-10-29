@@ -222,9 +222,7 @@ func (bot Bot) createDialog(reqA, reqB DialogRequest) error {
 func (bot Bot) findNextDialogRequest() (DialogRequest, error) {
 	for {
 		req, err := bot.db.FindNextDialogRequest()
-		if bot.db.IsNotFound(err) {
-			return DialogRequest{}, nil
-		} else if err != nil {
+		if err != nil {
 			return DialogRequest{}, err
 		}
 		user, err := bot.db.FindUser(req.UserID)
@@ -241,8 +239,20 @@ func (bot Bot) findNextDialogRequest() (DialogRequest, error) {
 
 func (bot Bot) JoinRequests() (bool, error) {
 	reqA, err := bot.findNextDialogRequest()
+	if bot.db.IsNotFound(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
 	log.Println("Request A found " + reqA.ID)
 	reqB, err := bot.findNextDialogRequest()
+	if bot.db.IsNotFound(err) {
+		bot.db.BackwardRequestDialog(reqA)
+		return false, nil
+	} else if err != nil {
+		bot.db.BackwardRequestDialog(reqA)
+		return false, err
+	}
 	log.Println("Request B found " + reqB.ID)
 	err = bot.createDialog(reqA, reqB)
 	return true, err
