@@ -7,6 +7,7 @@ COPY . .
 RUN CGO_ENABLED=0 GO111MODULE=on vgo build && cp ./tetatetchatbot /
 
 FROM alpine
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /tetatetchatbot /
 EXPOSE 8080
 CMD ["/tetatetchatbot"]
