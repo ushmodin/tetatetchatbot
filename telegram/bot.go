@@ -219,25 +219,31 @@ func (bot Bot) createDialog(reqA, reqB DialogRequest) error {
 	return bot.messageService.SendServiceMessage(userB.ChatID, "I found company for you. Dialog started")
 }
 
-func (bot Bot) JoinRequests() (bool, error) {
-	reqA, err := bot.db.FindNextDialogRequest()
-	if bot.db.IsNotFound(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
+func (bot Bot) findNextDialogRequest() (DialogRequest, error) {
+	for {
+		req, err := bot.db.FindNextDialogRequest()
+		if bot.db.IsNotFound(err) {
+			return DialogRequest{}, nil
+		} else if err != nil {
+			return DialogRequest{}, err
+		}
+		user, err := bot.db.FindUser(req.UserID)
+		if err != nil {
+			return DialogRequest{}, err
+		}
+		if user.Status != USER_STATUS_SEARCH {
+			continue
+		}
+		return req, nil
 	}
-	log.Println("Request A found " + reqA.ID)
 
-	var reqB DialogRequest
-	reqB, err = bot.db.FindNextDialogRequest()
-	if bot.db.IsNotFound(err) {
-		err = bot.db.BackwardRequestDialog(reqA)
-		return false, err
-	} else if err != nil {
-		bot.db.BackwardRequestDialog(reqA)
-		return false, err
-	}
-	log.Println("Request B found " + reqA.ID)
+}
+
+func (bot Bot) JoinRequests() (bool, error) {
+	reqA, err := bot.findNextDialogRequest()
+	log.Println("Request A found " + reqA.ID)
+	reqB, err := bot.findNextDialogRequest()
+	log.Println("Request B found " + reqB.ID)
 	err = bot.createDialog(reqA, reqB)
 	return true, err
 }
