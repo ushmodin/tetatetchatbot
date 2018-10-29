@@ -47,7 +47,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 			handler.bot.Search(*update.Message.From)
 			return
 		} else if cmd == "pause" {
-			handler.bot.Pause(update.Message.From)
+			handler.bot.Pause(*update.Message.From)
 			return
 		} else if cmd == "status" {
 			handler.bot.Status()
@@ -63,7 +63,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	chatID, err := handler.bot.GetCurrentCompany(update.Message.From)
+	chatID, err := handler.bot.GetCurrentCompany(*update.Message.From)
 	message := update.Message.Text
 	if _, ok := err.(*UserError); ok {
 		chatID = update.Message.Chat.ID
