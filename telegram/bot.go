@@ -147,7 +147,7 @@ func (bot Bot) Search(user User) error {
 	if err != nil {
 		return err
 	}
-	if botUser.Status == USER_STATUS_SEARCH {
+	if botUser.Status == USER_STATUS_SEARCH && !botUser.Pause {
 		return bot.messageService.SendServiceMessage(botUser.ChatID, "I'm still search")
 	}
 	log.Printf("User go to search mode %d", user.ID)
@@ -179,6 +179,10 @@ func (bot Bot) Search(user User) error {
 	}
 	log.Printf("Start dialog request for user %s", botUser.ID)
 	err = bot.db.StartDialog(botUser.ID)
+	if err != nil {
+		return err
+	}
+	err = bot.db.UpdateUserPause(botUser.ID, false)
 	if err != nil {
 		return err
 	}
