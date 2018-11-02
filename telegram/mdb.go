@@ -62,11 +62,11 @@ func (db MgoDb) DeleteDialog(id bson.ObjectId) error {
 }
 
 func (db MgoDb) UpdateUserStatus(id bson.ObjectId, status UserStatus) error {
-	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": status}})
+	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Status": status}})
 }
 
 func (db MgoDb) UpdateUserPause(id bson.ObjectId, flag bool) error {
-	return db.mongo.DB(db.db).C("dialogs").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Pause": flag}})
+	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Pause": flag}})
 }
 
 func (db MgoDb) StartDialog(userID bson.ObjectId) error {
