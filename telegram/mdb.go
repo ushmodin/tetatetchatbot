@@ -110,5 +110,5 @@ func (db MgoDb) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.Objec
 }
 
 func (db MgoDb) UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error {
-	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": userID}, bson.M{"_set": bson.M{"DialogID": dialogID}})
+	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": userID}, bson.M{"$set": bson.M{"DialogID": dialogID}})
 }

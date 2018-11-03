@@ -2,15 +2,11 @@ package telegram
 
 import (
 	"math/rand"
-	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
-
-var db *BoltDb
-var ms *BoltMessageService
-var bot *Bot
 
 func TestBotRun(t *testing.T) {
 	suite.Run(t, new(BotSuite))
@@ -18,26 +14,28 @@ func TestBotRun(t *testing.T) {
 
 type BotSuite struct {
 	suite.Suite
+	db  *MgoDb
+	ms  *BoltMessageService
+	bot *Bot
 }
 
 func (suite *BotSuite) SetupTest() {
 	var err error
-	db, err = NewBoltDb()
-	if err != nil {
-		suite.Fail("Can't create bot", err)
-	}
-	ms, err = NewBoltMessageService()
-	if err != nil {
-		suite.Fail("Can't create message service", err)
-	}
-	bot, err = NewBot(db, ms)
+	suite.db, err = NewMgoDb("localhost", "testtetatet")
+	require.NoError(suite.T(), err)
+	suite.ms, err = NewBoltMessageService()
+	require.NoError(suite.T(), err)
+	suite.bot, err = NewBot(suite.db, suite.ms)
+	require.NoError(suite.T(), err)
 }
 
 func (suite *BotSuite) TearDownTest() {
-	db.Close()
-	ms.Close()
-	os.Remove("bms.db")
-	os.Remove("tetatetchatbot.db")
+	if suite.db != nil {
+		suite.db.Close()
+	}
+	if suite.ms != nil {
+		suite.ms.Close()
+	}
 }
 
 func (suite *BotSuite) TestStart() {
@@ -52,9 +50,9 @@ func (suite *BotSuite) TestStart() {
 	chat := Chat{
 		ID: rand.Int63(),
 	}
-	suite.NoError(bot.Start(user, chat), "Can't  start user")
-	suite.NoError(bot.Start(user, chat), "Can't  start user")
-	messages, err := ms.Next10()
+	require.NoError(suite.T(), suite.bot.Start(user, chat), "Can't  start user")
+	require.NoError(suite.T(), suite.bot.Start(user, chat), "Can't  start user")
+	messages, err := suite.ms.Next10()
 	suite.Nil(err, "Can't get messages")
 	suite.Equal(2, len(messages), "Incorrect message count")
 	suite.Equal(chat.ID, messages[0].ChatID, "Incorrect message count")
@@ -83,16 +81,16 @@ func (suite *BotSuite) TestJoinRequests() {
 	chatB := Chat{
 		ID: rand.Int63(),
 	}
-	suite.NoError(bot.Start(userA, chatA), "Can't start user")
-	suite.NoError(bot.Start(userB, chatB), "Can't start user")
+	require.NoError(suite.T(), suite.bot.Start(userA, chatA), "Can't start user")
+	require.NoError(suite.T(), suite.bot.Start(userB, chatB), "Can't start user")
 
-	suite.NoError(bot.Search(userA), "Can't start user")
-	suite.NoError(bot.Search(userB), "Can't start user")
+	require.NoError(suite.T(), suite.bot.Search(userA), "Can't start user")
+	require.NoError(suite.T(), suite.bot.Search(userB), "Can't start user")
 
-	ok, err := bot.JoinRequests()
-	suite.NoError(err, "Join error")
+	ok, err := suite.bot.JoinRequests()
+	require.NoError(suite.T(), err, "Join error")
 	suite.True(ok, "Requests not joined")
-	messages, err := ms.Next10()
-	suite.NoError(err)
+	messages, err := suite.ms.Next10()
+	require.NoError(suite.T(), err)
 	suite.Equal(4, len(messages), "Incorrect message count")
 }
