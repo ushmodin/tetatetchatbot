@@ -23,14 +23,7 @@ func main() {
 	log.Println("Connected to mongodb")
 	bot, _ := telegram.NewBot(db, client)
 	log.Println("Bot created")
-	go func() {
-		for {
-			_, err := bot.JoinRequests()
-			if err != nil {
-				log.Print(err)
-			}
-		}
-	}()
+	go bot.JoinRequestsLoop()
 	handler, _ := telegram.NewHTTPHandler(bot, client)
 	router.HandleFunc("/t/b/tetatet/updates", handler.UpdateHandler).Methods("POST")
 	router.HandleFunc("/ping", handler.PingHandler).Methods("GET")

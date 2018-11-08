@@ -3,6 +3,7 @@ package telegram
 import (
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -19,6 +20,15 @@ type BotSuite struct {
 	bot *Bot
 }
 
+func randString(n int) string {
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
 func (suite *BotSuite) SetupTest() {
 	var err error
 	suite.db, err = NewMgoDb("localhost", "testtetatet")
@@ -27,6 +37,7 @@ func (suite *BotSuite) SetupTest() {
 	require.NoError(suite.T(), err)
 	suite.bot, err = NewBot(suite.db, suite.ms)
 	require.NoError(suite.T(), err)
+	rand.Seed(time.Now().UnixNano())
 }
 
 func (suite *BotSuite) TearDownTest() {
@@ -41,9 +52,9 @@ func (suite *BotSuite) TearDownTest() {
 func (suite *BotSuite) TestStart() {
 	user := User{
 		ID:           rand.Int(),
-		FirstName:    "Ivan",
-		LastName:     "Ivanov",
-		UserName:     "IvanovIvan",
+		FirstName:    randString(5),
+		LastName:     randString(8),
+		UserName:     randString(15),
 		LanguageCode: "RU",
 		IsBot:        false,
 	}
@@ -61,9 +72,9 @@ func (suite *BotSuite) TestStart() {
 func (suite *BotSuite) TestJoinRequests() {
 	userA := User{
 		ID:           rand.Int(),
-		FirstName:    "Ivan",
-		LastName:     "Ivanov",
-		UserName:     "IvanovIvan",
+		FirstName:    randString(5),
+		LastName:     randString(8),
+		UserName:     randString(15),
 		LanguageCode: "RU",
 		IsBot:        false,
 	}
@@ -72,9 +83,9 @@ func (suite *BotSuite) TestJoinRequests() {
 	}
 	userB := User{
 		ID:           rand.Int(),
-		FirstName:    "Petr",
-		LastName:     "Petrov",
-		UserName:     "PetrPetrov",
+		FirstName:    randString(5),
+		LastName:     randString(8),
+		UserName:     randString(15),
 		LanguageCode: "RU",
 		IsBot:        false,
 	}
@@ -93,4 +104,54 @@ func (suite *BotSuite) TestJoinRequests() {
 	messages, err := suite.ms.Next10()
 	require.NoError(suite.T(), err)
 	suite.Equal(4, len(messages), "Incorrect message count")
+}
+
+func (suite *BotSuite) Test100UserSearchPauseChat() {
+	count := 50
+	type TestUser struct {
+		user     User
+		chat     Chat
+		msgCount int
+		pause    bool
+	}
+	go suite.bot.JoinRequestsLoop()
+
+	users := make([]TestUser, count)
+	for i := 0; i < count; i++ {
+		users[i].user = User{
+			ID:           i,
+			FirstName:    randString(5),
+			LastName:     randString(8),
+			UserName:     randString(15),
+			LanguageCode: "RU",
+			IsBot:        false,
+		}
+		users[i].chat = Chat{
+			ID: int64(i),
+		}
+		users[i].msgCount = 3 + rand.Intn(2)
+		users[i].pause = false
+		require.NoError(suite.T(), suite.bot.Start(users[i].user, users[i].chat), "Can't start user")
+		require.NoError(suite.T(), suite.bot.Search(users[i].user), "Can't start user search")
+	}
+	time.Sleep(1 * time.Second)
+	for i := 0; i < 100; i++ {
+		for userIdx := 0; userIdx < count; userIdx++ {
+			companyID, err := suite.bot.GetCurrentCompany(users[userIdx].user)
+			require.NoError(suite.T(), err, "error while get current company")
+			if users[userIdx].pause {
+				require.NoError(suite.T(), suite.bot.Search(users[userIdx].user), "Search command error")
+				users[userIdx].pause = false
+			} else if companyID == 0 || users[userIdx].msgCount <= 0 {
+				if rand.Intn(3) == 0 {
+					require.NoError(suite.T(), suite.bot.Pause(users[userIdx].user), "Pause error error")
+					users[userIdx].pause = true
+				} else {
+					require.NoError(suite.T(), suite.bot.Search(users[userIdx].user), "Search command error")
+				}
+			} else {
+				users[userIdx].msgCount--
+			}
+		}
+	}
 }

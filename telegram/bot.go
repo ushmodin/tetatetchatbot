@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"log"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 )
@@ -262,6 +263,17 @@ func (bot Bot) JoinRequests() (bool, error) {
 	return true, err
 }
 
+func (bot Bot) JoinRequestsLoop() {
+	for {
+		ok, err := bot.JoinRequests()
+		if err != nil {
+			log.Print(err)
+		}
+		if !ok {
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
 func (bot Bot) Pause(user User) error {
 	botUser, err := bot.db.FindUserByTelegramID(user.ID)
 	if err != nil {
