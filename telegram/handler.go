@@ -37,8 +37,9 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 	if update.Message.Text == "" {
 		return
 	}
-	log.Println("Command " + update.Message.Text)
 	if update.Message.Text[:1] == "/" {
+		log.Println("Command " + update.Message.Text)
+
 		cmd := update.Message.Text[1:]
 		if cmd == "start" {
 			handler.bot.Start(*update.Message.From, *update.Message.Chat)
