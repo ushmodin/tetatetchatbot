@@ -333,15 +333,11 @@ func (bot Bot) GetCurrentCompany(user User) (int64, error) {
 		bot.db.UpdateUserPause(botUser.ID, true)
 		return 0, nil
 	}
-	var companyUserID bson.ObjectId
+	var companyChatID int64
 	if dialog.UserA == botUser.ID {
-		companyUserID = dialog.UserB
+		companyChatID = dialog.ChatB
 	} else {
-		companyUserID = dialog.UserA
+		companyChatID = dialog.ChatA
 	}
-	companyUser, err := bot.db.FindUser(companyUserID)
-	if err != nil {
-		return 0, err
-	}
-	return companyUser.ChatID, nil
+	return companyChatID, nil
 }
