@@ -17,7 +17,7 @@ type Db interface {
 	UpdateUserStatus(userID bson.ObjectId, status UserStatus) error
 	UpdateUserPause(userID bson.ObjectId, flag bool) error
 	UpdateUserDialog(userID bson.ObjectId, dialogID *bson.ObjectId) error
-	StartDialog(userID bson.ObjectId) error
+	StartDialog(userID bson.ObjectId, chatID int64) error
 	FindNextDialogRequest() (DialogRequest, error)
 	CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.ObjectId, error)
 	UpdateDialogRequestProcessing(id bson.ObjectId, processing bool) error
@@ -47,14 +47,17 @@ type Dialog struct {
 	ID      bson.ObjectId `bson:"_id,omitempty"`
 	UserA   bson.ObjectId `bson:"UserA"`
 	AcceptA bool          `bson:"AcceptA"`
+	ChatA   int64         `bson:"ChatA"`
 	UserB   bson.ObjectId `bson:"UserB"`
 	AcceptB bool          `bson:"AcceptB"`
+	ChatB   int64         `bson:"ChatB"`
 	Status  DialogStatus  `bson:"Status"`
 }
 
 type DialogRequest struct {
 	ID         bson.ObjectId `bson:"_id,omitempty"`
 	UserID     bson.ObjectId `bson:"UserId"`
+	ChatID     int64         `bson:"ChatID"`
 	Processing bool          `bson:"Processing"`
 	Created    int64         `bson:"Created"`
 }
@@ -179,7 +182,7 @@ func (bot Bot) Search(user User) error {
 		return err
 	}
 	log.Printf("Start dialog request for user %s", botUser.ID)
-	err = bot.db.StartDialog(botUser.ID)
+	err = bot.db.StartDialog(botUser.ID, botUser.ChatID)
 	if err != nil {
 		return err
 	}
@@ -259,8 +262,13 @@ func (bot Bot) JoinRequests() (bool, error) {
 		return false, err
 	}
 	log.Println("Request B found " + reqB.ID)
-	err = bot.createDialog(reqA, reqB)
-	return true, err
+
+	if err = bot.createDialog(reqA, reqB); err != nil {
+		return false, err
+	}
+	bot.messageService.SendServiceMessage(reqA.ChatID, "Company found. You can start communication ;)")
+	bot.messageService.SendServiceMessage(reqB.ChatID, "Company found. You can start communication ;)")
+	return true, nil
 }
 
 func (bot Bot) JoinRequestsLoop() {

@@ -69,11 +69,12 @@ func (db MgoDb) UpdateUserPause(id bson.ObjectId, flag bool) error {
 	return db.mongo.DB(db.db).C("users").Update(bson.M{"_id": id}, bson.M{"$set": bson.M{"Pause": flag}})
 }
 
-func (db MgoDb) StartDialog(userID bson.ObjectId) error {
+func (db MgoDb) StartDialog(userID bson.ObjectId, chatID int64) error {
 	return db.mongo.DB(db.db).C("dialog_requests").Insert(DialogRequest{
 		UserID:     userID,
 		Processing: false,
 		Created:    time.Now().Unix(),
+		ChatID:     chatID,
 	})
 }
 
@@ -102,8 +103,10 @@ func (db MgoDb) CreateDialog(reqA DialogRequest, reqB DialogRequest) (bson.Objec
 		ID:      id,
 		UserA:   reqA.UserID,
 		AcceptA: false,
+		ChatA:   reqA.ChatID,
 		UserB:   reqB.UserID,
 		AcceptB: false,
+		ChatB:   reqB.ChatID,
 		Status:  DIALOG_STATUS_ACTIVE,
 	}
 	return id, db.mongo.DB(db.db).C("dialogs").Insert(dialog)
