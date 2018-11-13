@@ -213,18 +213,7 @@ func (bot Bot) createDialog(reqA, reqB DialogRequest) error {
 		return err
 	}
 	log.Printf("Dialog for %s and %s created", reqA.UserID, reqB.UserID)
-	userA, err := bot.db.FindUser(reqA.UserID)
-	if err != nil {
-		return err
-	}
-	userB, err := bot.db.FindUser(reqB.UserID)
-	if err != nil {
-		return err
-	}
-	if err := bot.messageService.SendServiceMessage(userA.ChatID, "I found company for you. Dialog started"); err != nil {
-		return err
-	}
-	return bot.messageService.SendServiceMessage(userB.ChatID, "I found company for you. Dialog started")
+	return nil
 }
 
 func (bot Bot) findNextDialogRequest() (DialogRequest, error) {
@@ -266,6 +255,12 @@ func (bot Bot) JoinRequests() (bool, error) {
 	log.Println("Request B found " + reqB.ID)
 
 	if err = bot.createDialog(reqA, reqB); err != nil {
+		return false, err
+	}
+	if err = bot.db.UpdateUserPause(reqA.UserID, false); err != nil {
+		return false, err
+	}
+	if err = bot.db.UpdateUserPause(reqB.UserID, false); err != nil {
 		return false, err
 	}
 	if err = bot.messageService.SendServiceMessage(reqA.ChatID, "Company found. You can start communication ;)"); err != nil {
