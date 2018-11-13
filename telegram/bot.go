@@ -334,6 +334,9 @@ func (bot Bot) GetCurrentCompany(user User) (int64, error) {
 	if botUser.DialogID == nil {
 		return 0, nil
 	}
+	if botUser.Pause {
+		return 0, nil
+	}
 	dialog, err := bot.db.FindDialog(*botUser.DialogID)
 	if err != nil {
 		return 0, err
@@ -344,10 +347,17 @@ func (bot Bot) GetCurrentCompany(user User) (int64, error) {
 		return 0, nil
 	}
 	var companyChatID int64
+	var companyUserID bson.ObjectId
 	if dialog.UserA == botUser.ID {
 		companyChatID = dialog.ChatB
+		companyUserID = dialog.UserB
 	} else {
 		companyChatID = dialog.ChatA
+		companyUserID = dialog.UserB
+	}
+	companyUser, err := bot.db.FindUser(companyUserID)
+	if companyUser.Pause {
+		return 0, nil
 	}
 	return companyChatID, nil
 }
