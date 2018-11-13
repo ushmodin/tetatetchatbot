@@ -259,6 +259,7 @@ func (bot Bot) JoinRequests() (bool, error) {
 		bot.db.BackwardRequestDialog(reqA)
 		return false, nil
 	} else if err != nil {
+		log.Println("Error. Backward Request A")
 		bot.db.BackwardRequestDialog(reqA)
 		return false, err
 	}
@@ -267,8 +268,12 @@ func (bot Bot) JoinRequests() (bool, error) {
 	if err = bot.createDialog(reqA, reqB); err != nil {
 		return false, err
 	}
-	bot.messageService.SendServiceMessage(reqA.ChatID, "Company found. You can start communication ;)")
-	bot.messageService.SendServiceMessage(reqB.ChatID, "Company found. You can start communication ;)")
+	if err = bot.messageService.SendServiceMessage(reqA.ChatID, "Company found. You can start communication ;)"); err != nil {
+		return true, err
+	}
+	if err = bot.messageService.SendServiceMessage(reqB.ChatID, "Company found. You can start communication ;)"); err != nil {
+		return true, err
+	}
 	return true, nil
 }
 
@@ -292,6 +297,15 @@ func (bot Bot) Pause(user User) error {
 	value := !botUser.Pause
 	err = bot.db.UpdateUserPause(botUser.ID, value)
 	if err != nil {
+		return err
+	}
+	var message string
+	if value {
+		message = "Ok. Im wait for you"
+	} else {
+		message = "Go go go!!!"
+	}
+	if err := bot.messageService.SendServiceMessage(botUser.ChatID, message); err != nil {
 		return err
 	}
 
