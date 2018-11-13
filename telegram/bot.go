@@ -255,6 +255,7 @@ func (bot Bot) JoinRequests() (bool, error) {
 	log.Println("Request A found " + reqA.ID)
 	reqB, err := bot.findNextDialogRequest()
 	if bot.db.IsNotFound(err) {
+		log.Println("Dialog B not found. Backward Request A")
 		bot.db.BackwardRequestDialog(reqA)
 		return false, nil
 	} else if err != nil {
