@@ -80,7 +80,12 @@ func (db MgoDb) StartDialog(userID bson.ObjectId, chatID int64) error {
 
 func (db MgoDb) BackwardRequestDialog(dlgReq DialogRequest) error {
 	dlgReq.Created = time.Now().Unix()
-	return db.mongo.DB(db.db).C("dialog_requests").Insert(dlgReq)
+	return db.mongo.DB(db.db).C("dialog_requests").Insert(DialogRequest{
+		UserID:     dlgReq.UserID,
+		Processing: false,
+		Created:    time.Now().Unix(),
+		ChatID:     dlgReq.ChatID,
+	})
 }
 
 func (db MgoDb) FindNextDialogRequest() (DialogRequest, error) {
