@@ -318,12 +318,51 @@ func (bot Bot) Pause(user User) error {
 	return nil
 }
 
-func (bot Bot) Status() error {
-	return nil
-}
-
-func (bot Bot) Who() error {
-	return nil
+func (bot Bot) Status(user User) error {
+	botUser, err := bot.db.FindUserByTelegramID(user.ID)
+	if err != nil {
+		return err
+	}
+	var message string
+	if botUser.Pause {
+		message += "Pause: ON\n"
+	} else {
+		message += "Pause: OFF\n"
+	}
+	var dialog *Dialog
+	if botUser.DialogID != nil {
+		*dialog, err = bot.db.FindDialog(*botUser.DialogID)
+		if err != nil {
+			return err
+		}
+		if dialog.Status != DIALOG_STATUS_ACTIVE {
+			bot.db.UpdateUserDialog(botUser.ID, nil)
+			bot.db.UpdateUserPause(botUser.ID, true)
+			dialog = nil
+			return nil
+		}
+	}
+	if dialog != nil {
+		message += "Dialog: Active\n"
+		var companyUserID bson.ObjectId
+		if dialog.UserA == botUser.ID {
+			companyUserID = dialog.UserB
+		} else {
+			companyUserID = dialog.UserB
+		}
+		companyUser, err := bot.db.FindUser(companyUserID)
+		if err != nil {
+			return err
+		}
+		if companyUser.Pause {
+			message += "Company: Paused\n"
+		} else {
+			message += "Company: Available\n"
+		}
+	} else {
+		message += "Dialog: No\n"
+	}
+	return bot.messageService.SendServiceMessage(botUser.ChatID, message)
 }
 
 func (bot Bot) GetCurrentCompany(user User) (int64, error) {

@@ -51,10 +51,7 @@ func (handler HTTPHandler) UpdateHandler(w http.ResponseWriter, r *http.Request)
 			handler.bot.Pause(*update.Message.From)
 			return
 		} else if cmd == "status" {
-			handler.bot.Status()
-			return
-		} else if cmd == "who" {
-			handler.bot.Who()
+			handler.bot.Status(*update.Message.From)
 			return
 		} else {
 			err = handler.messageService.SendServiceMessage(update.Message.Chat.ID, "BOT: Unknow command "+cmd)
