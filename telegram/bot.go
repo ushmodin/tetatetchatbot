@@ -331,10 +331,11 @@ func (bot Bot) Status(user User) error {
 	}
 	var dialog *Dialog
 	if botUser.DialogID != nil {
-		*dialog, err = bot.db.FindDialog(*botUser.DialogID)
+		dlg, err := bot.db.FindDialog(*botUser.DialogID)
 		if err != nil {
 			return err
 		}
+		dialog = &dlg
 		if dialog.Status != DIALOG_STATUS_ACTIVE {
 			bot.db.UpdateUserDialog(botUser.ID, nil)
 			bot.db.UpdateUserPause(botUser.ID, true)
